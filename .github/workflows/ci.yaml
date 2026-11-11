@@ -110,20 +110,20 @@ jobs:
           echo "."
           ls -ail .
           echo ".."
-          ls -ail ..
-          echo "certstream-server-rust"
-          ls -ail certstream-server-rust
-          echo "certstream-server-rust/target"
-          ls -ail certstream-server-rust/target
-          echo "certstream-server-rust/target/${{ matrix.target }}"
-          ls -ail certstream-server-rust/target/${{ matrix.target }}
-          ls -ailR certstream-server-rust/target/${{ matrix.target }}
+          #ls -ail ..
+          #echo "certstream-server-rust"
+          #ls -ail certstream-server-rust
+          #echo "certstream-server-rust/target"
+          #ls -ail certstream-server-rust/target
+          #echo "certstream-server-rust/target/${{ matrix.target }}"
+          #ls -ail certstream-server-rust/target/${{ matrix.target }}
+          #ls -ailR certstream-server-rust/target/${{ matrix.target }}
           echo "certstream-server-rust/target/${{ matrix.target }}/release"
           ls -ail certstream-server-rust/target/${{ matrix.target }}/release
           echo "release"
           ls -ail release
           ls -ailR release
-          cp certstream-server-rust/target/${{ matrix.target }}/certstream-server-rust release/usr/bin/certstream-server-rust
+          cp certstream-server-rust/target/${{ matrix.target }}/release/certstream-server-rust release/usr/bin/certstream-server-rust
           cp certstream-server-rust/config.example.yaml release/etc/certstream/
           cp certstream-server-rust.logrotate release/etc/logrotate.d/certstream-server-rust
           cp certstream-server-rust/LICENSE certstream-server-rust/RELEASE_NOTES.md certstream-server-rust/README.md release/usr/share/certstream-server-rust/
