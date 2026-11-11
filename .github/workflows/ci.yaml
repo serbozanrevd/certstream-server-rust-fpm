@@ -127,9 +127,8 @@ jobs:
           cp certstream-server-rust/config.example.yaml release/etc/certstream/
           cp certstream-server-rust.logrotate release/etc/logrotate.d/certstream-server-rust
           cp certstream-server-rust/LICENSE certstream-server-rust/RELEASE_NOTES.md certstream-server-rust/README.md release/usr/share/certstream-server-rust/
-          cp certstream-server-rust/packaging/certstream-server-rust.default /etc/default/certstream-server-rust
+          cp certstream-server-rust/packaging/certstream-server-rust.default release/etc/default/certstream-server-rust
           cp certstream-server-rust/packaging/certstream-server-rust.service release/lib/systemd/system/certstream-server-rust.service
-
           cp systemd_debian.conf release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
           echo '' > release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
           grep '# CERTSTREAM_' certstream-server-rust/packaging/certstream-server-rust.default | sed 's/^# /Environment=/' > release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
