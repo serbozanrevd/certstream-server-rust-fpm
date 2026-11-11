@@ -1,0 +1,8 @@
+/var/log/certstream/*.log {
+   daily
+   copytruncate
+   missingok
+   rotate 12
+   compress
+   notifempty
+}

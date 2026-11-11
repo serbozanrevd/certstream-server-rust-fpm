@@ -1,0 +1,226 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 2.**
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TODO: >-
+    --deb-changelog
+  BUILD_TYPE: Release
+  DEB_FPM_OPTS: >-
+    --prefix '/'
+    --config-files /etc/certstream/config.yaml
+    --config-files /etc/logrotate.d/certstream-server-rust
+  COMMON_FPM_OPTS: >-
+    -s dir
+    -n certstream-server-rust
+    --verbose
+    -a native
+    --description 'High-performance Certificate Transparency (CT) monitoring tool written in Rust. Real-time stream of newly issued SSL/TLS certificates from CT logs. Rust implementation of certstream-server with improved performance and memory efficiency.'
+    --url 'https://github.com/reloading01/certstream-server-rust'
+    --license 'MIT'
+    --conflicts certstream-server
+    --provides certstream-server
+    --after-install certstream-server-rust.postinst
+  SOFTWARE_NAME: 'certstream-server-rust'
+
+jobs:
+  build_packages:
+    name: Build DEB Package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-24.04
+            args_postfix_filename: 'u24'
+            args_system: 'linux'
+            args_architecture: 'amd64'
+            target: x86_64-unknown-linux-gnu
+          - platform: ubuntu-26.04
+            args_postfix_filename: 'u26'
+            args_system: 'linux'
+            args_architecture: 'amd64'
+            target: x86_64-unknown-linux-gnu
+          - platform: ubuntu-24.04-arm
+            args_postfix_filename: 'u24'
+            args_system: 'linux'
+            args_architecture: 'arm64'
+            target: aarch64-unknown-linux-gnu
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 64
+
+      - name: Install Dependencies
+        run: |
+          sudo apt install -y git build-essential cargo-1.97 rustc-1.97 musl-dev librust-openssl-dev
+          sudo ln -s /usr/bin/cargo-1.97 /usr/bin/cargo
+          sudo ln -s /usr/bin/rustc-1.97 /usr/bin/rustc
+
+      - name: Set env variables
+        run: |
+          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+          echo "ITERATION=$(cat ITERATION)" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=${{ env.SOFTWARE_NAME }}_$(cat VERSION)-$(cat ITERATION)_${{ matrix.args_system }}-${{ matrix.args_architecture }}-${{ matrix.args_postfix_filename }}.deb" >> $GITHUB_ENV
+
+      - name: Tag version and push
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git tag "v${{ env.VERSION }}-${{ env.ITERATION }}" --force
+          git push origin "v${{ env.VERSION }}-${{ env.ITERATION }}" --tag --force
+
+      - name: Build
+        run: |
+          git clone -b "v${{ env.VERSION }}" https://github.com/reloading01/certstream-server-rust.git
+          cd certstream-server-rust
+          cargo build --release --locked --bins --target ${{ matrix.target }}
+
+      - name: Make DEB release directory
+        env:
+          Build_Version: ${{ github.run_id }}.${{ github.run_number }}.${{ github.run_attempt }}
+        run: |
+          mkdir release
+          mkdir release/etc
+          mkdir release/etc/certstream
+          mkdir release/etc/logrotate.d
+          mkdir release/etc/default
+          mkdir release/etc/systemd
+          mkdir release/etc/systemd/system
+          mkdir release/etc/systemd/system/certstream-server-rust.service.d
+          mkdir release/lib
+          mkdir release/lib/systemd
+          mkdir release/lib/systemd/system
+          mkdir release/usr
+          mkdir release/usr/bin
+          mkdir release/usr/share
+          mkdir release/usr/share/certstream-server-rust
+          echo "."
+          ls -ail .
+          echo ".."
+          ls -ail ..
+          echo "certstream-server-rust"
+          ls -ail certstream-server-rust
+          echo "certstream-server-rust/target"
+          ls -ail certstream-server-rust/target
+          echo "certstream-server-rust/target/${{ matrix.target }}"
+          ls -ail certstream-server-rust/target/${{ matrix.target }}
+          ls -ailR certstream-server-rust/target/${{ matrix.target }}
+          echo "certstream-server-rust/target/${{ matrix.target }}/release"
+          ls -ail certstream-server-rust/target/${{ matrix.target }}/release
+          echo "release"
+          ls -ail release
+          ls -ailR release
+          cp certstream-server-rust/target/${{ matrix.target }}/certstream-server-rust release/usr/bin/certstream-server-rust
+          cp certstream-server-rust/config.example.yaml release/etc/certstream/
+          cp certstream-server-rust.logrotate release/etc/logrotate.d/certstream-server-rust
+          cp certstream-server-rust/LICENSE certstream-server-rust/RELEASE_NOTES.md certstream-server-rust/README.md release/usr/share/certstream-server-rust/
+          cp certstream-server-rust/packaging/certstream-server-rust.default /etc/default/certstream-server-rust
+          cp certstream-server-rust/packaging/certstream-server-rust.service release/lib/systemd/system/certstream-server-rust.service
+
+          cp systemd_debian.conf release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
+          echo '' > release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
+          grep '# CERTSTREAM_' certstream-server-rust/packaging/certstream-server-rust.default | sed 's/^# /Environment=/' > release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
+          echo "{\"version\": \"${{ env.Build_Version }}\"}" > release/usr/share/certstream-server-rust/build_version.json
+          ls -ailR release
+
+      - name: Package DEB
+        continue-on-error: false
+        uses: bpicode/github-action-fpm@v0.9.3
+        with:
+          fpm_args: '.'
+          fpm_opts: '-t deb -v ${{ env.VERSION }} --iteration ${{ env.ITERATION }} -C release ${{ env.COMMON_FPM_OPTS }} ${{ env.DEB_FPM_OPTS }}'
+
+      - name: Make DEB release directory
+        run: |
+          echo "SIMPLE_PACKAGE_NAME=$(ls *.deb | head -n 1)" >> $GITHUB_ENV
+
+      - name: Rename package name
+        run: |
+          mv "./${{ env.SIMPLE_PACKAGE_NAME }}" "./${{ env.PACKAGE_NAME }}"
+
+      - name: Upload built asset
+        uses: actions/upload-artifact@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: ${{ env.PACKAGE_NAME }}
+          path: ./${{ env.PACKAGE_NAME }}
+          retention-days: 2
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build_packages
+    steps:
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 64
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Set env variables
+        run: |
+          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+          echo "ITERATION=$(cat ITERATION)" >> $GITHUB_ENV
+
+      - name: List files
+        run: |
+          echo "local"
+          ls -ail ./
+          echo "dist"
+          ls -ail dist
+          ls -1 dist/${{ env.SOFTWARE_NAME }}_${{ env.VERSION }}-${{ env.ITERATION }}_*.deb
+
+      - name: Prepare file list
+        id: prep
+        run: |
+          echo "-1--"
+          echo "$(ls -1 dist/${{ env.SOFTWARE_NAME }}_${{ env.VERSION }}-${{ env.ITERATION }}_*.deb )"
+          echo "-2--"
+          echo "$(ls -1 dist/${{ env.SOFTWARE_NAME }}_${{ env.VERSION }}-${{ env.ITERATION }}_*.deb | sed 's/dist\///' )"
+          echo "-3--"
+          echo "$(ls -1 dist/${{ env.SOFTWARE_NAME }}_${{ env.VERSION }}-${{ env.ITERATION }}_*.deb | sed 's/dist\///' | sed 's/ /\n/g')"
+          echo "-4--"
+          files=$(ls -1 dist/${{ env.SOFTWARE_NAME }}_${{ env.VERSION }}-${{ env.ITERATION }}_*.deb | sed 's/dist\///' | sed 's/ /\n/g')
+          echo "files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$files" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Verify ouput variable files
+        run: |
+          echo "${{ steps.prep.outputs.files }}"
+
+      - name: Release
+        continue-on-error: false
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ env.VERSION }}-${{ env.ITERATION }}
+          name: ${{ env.VERSION }}-${{ env.ITERATION }}
+          working_directory: dist
+          files: ${{ steps.prep.outputs.files }}
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Increment the value inside ITERATION
+        continue-on-error: false
+        run: |
+          bash ./up_iteration.sh
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git commit -m "increment the ITERATION" ITERATION
+          git push origin
