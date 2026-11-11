@@ -62,12 +62,15 @@ jobs:
         with:
           fetch-depth: 64
 
+      - uses: dtolnay/rust-toolchain@1.97
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git build-essential cargo-1.97 rustc-1.97 musl-dev librust-openssl-dev
-          sudo ln -s /usr/bin/cargo-1.97 /usr/bin/cargo
-          sudo ln -s /usr/bin/rustc-1.97 /usr/bin/rustc
+          #sudo apt-get install -y git build-essential cargo-1.97 rustc-1.97 musl-dev librust-openssl-dev
+          sudo apt-get install -y git build-essential musl-dev librust-openssl-dev
+          #sudo ln -s /usr/bin/cargo-1.97 /usr/bin/cargo
+          #sudo ln -s /usr/bin/rustc-1.97 /usr/bin/rustc
 
       - name: Set env variables
         run: |
