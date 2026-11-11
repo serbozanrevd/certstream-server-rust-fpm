@@ -3,8 +3,10 @@ name: Release
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 2.**
+    branches: [main]
+    paths:
+      - 'VERSION'
+      - '.github/workflows/ci.yaml'
 
 concurrency:
   group: release-${{ inputs.tag || github.ref_name }}
@@ -62,7 +64,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt install -y git build-essential cargo-1.97 rustc-1.97 musl-dev librust-openssl-dev
+          sudo apt-get update
+          sudo apt-get install -y git build-essential cargo-1.97 rustc-1.97 musl-dev librust-openssl-dev
           sudo ln -s /usr/bin/cargo-1.97 /usr/bin/cargo
           sudo ln -s /usr/bin/rustc-1.97 /usr/bin/rustc
 
