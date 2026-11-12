@@ -127,7 +127,7 @@ jobs:
           ls -ail release
           ls -ailR release
           cp certstream-server-rust/target/${{ matrix.target }}/release/certstream-server-rust release/usr/bin/certstream-server-rust
-          cp certstream-server-rust/config.example.yaml release/etc/certstream/
+          cp certstream-server-rust/config.example.yaml release/etc/certstream/config.yaml
           cp certstream-server-rust.logrotate release/etc/logrotate.d/certstream-server-rust
           cp certstream-server-rust/LICENSE certstream-server-rust/RELEASE_NOTES.md certstream-server-rust/README.md release/usr/share/certstream-server-rust/
           cp certstream-server-rust/packaging/certstream-server-rust.default release/etc/default/certstream-server-rust
