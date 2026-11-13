@@ -130,12 +130,7 @@ jobs:
           ls -ailR release
           cp certstream-server-rust/target/${{ matrix.target }}/release/certstream-server-rust release/usr/bin/certstream-server-rust
           cp certstream-server-rust/config.example.yaml release/etc/certstream/config.yaml
-          python3 << 'PYEOF'
-content = open('release/etc/certstream/config.yaml').read()
-entry = "  - name: \"Let's Encrypt 'Willow' 2026h1\"\n    url: \"https://mon.willow.ct.letsencrypt.org/2026h1/\"\n    log_origin: \"log.willow.ct.letsencrypt.org/2026h1\"\n"
-content = content.replace("static_logs:\n", "static_logs:\n" + entry, 1)
-open('release/etc/certstream/config.yaml', 'w').write(content)
-PYEOF
+          python3 -c 'f="release/etc/certstream/config.yaml"; c=open(f).read(); e="  - name: \"Let'\''s Encrypt '\''Willow'\'' 2026h1\"\n    url: \"https://mon.willow.ct.letsencrypt.org/2026h1/\"\n    log_origin: \"log.willow.ct.letsencrypt.org/2026h1\"\n"; open(f,"w").write(c.replace("static_logs:\n","static_logs:\n"+e,1))'
           cp certstream-server-rust.logrotate release/etc/logrotate.d/certstream-server-rust
           cp certstream-server-rust/LICENSE certstream-server-rust/RELEASE_NOTES.md certstream-server-rust/README.md release/usr/share/certstream-server-rust/
           cp certstream-server-rust/packaging/certstream-server-rust.default release/etc/default/certstream-server-rust
