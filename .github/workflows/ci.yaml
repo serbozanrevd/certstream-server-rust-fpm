@@ -138,6 +138,9 @@ jobs:
           cp systemd_debian.conf release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
           echo '' >> release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
           grep '# CERTSTREAM_' certstream-server-rust/packaging/certstream-server-rust.default | sed 's/^# /Environment=/' >> release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
+          echo "Environment=CERTSTREAM_CONFIG=/etc/certstream/config.yaml" >> release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
+          echo "Environment=CERTSTREAM_STREAM_FULL_ENABLED=False" >> release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
+          echo "Environment=CERTSTREAM_STREAM_LITE_ENABLED=True" >> release/etc/systemd/system/certstream-server-rust.service.d/debian.conf
           echo "{\"version\": \"${{ env.Build_Version }}\"}" > release/usr/share/certstream-server-rust/build_version.json
           cp ufw_socket release/etc/ufw/applications.d/certstream
           ls -ailR release
